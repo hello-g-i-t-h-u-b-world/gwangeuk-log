@@ -7,8 +7,8 @@
 #  3. 삭제처럼 되돌릴 수 없는 건 (y/n) 으로 한번 더 물어본다
 #
 # 계산이랑 저장은 여기서 안 하고 service.py 한테 시킨다.
-# 이번 1차 구현은 FR-01, FR-02 랑 json 저장까지다.
-# 통계(FR-03~05)랑 검색(FR-06)은 2차에 만들 거라서 안내만 띄운다.
+# 1차 : FR-01 공연/관람 기록 관리, FR-02 지출 내역 관리, json 저장
+# 2차 : FR-03 월별 통계, FR-04 공연별 분석, FR-05 순위, FR-06 검색
 # ============================================================
 
 import os
@@ -225,6 +225,45 @@ def get_old(old, key):
     return old[key]
 
 
+# 연도 입력 받기 (EH-01)
+def input_year():
+    while True:
+        text = get_input(" 연도 (예: 2026): ")
+        if text == None:
+            return None
+
+        value, error = input_utils.check_year(text)
+        if value != None:
+            return value
+        print(" ! " + error)
+
+
+# 월 입력 받기 (EH-01)
+def input_month():
+    while True:
+        text = get_input(" 월 (1 ~ 12): ")
+        if text == None:
+            return None
+
+        value, error = input_utils.check_month(text)
+        if value != None:
+            return value
+        print(" ! " + error)
+
+
+# 검색 기준 고르기
+def input_search_type():
+    while True:
+        text = get_input(" 검색 기준: ")
+        if text == None:
+            return None
+
+        value, error = input_utils.check_search_type(text)
+        if value != None:
+            return value
+        print(" ! " + error)
+
+
 # ============================================================
 # 메인 메뉴 (UI-01)
 # ============================================================
@@ -242,8 +281,8 @@ def start(data):
         print_line2()
         print(" 1. 공연 관리")
         print(" 2. 관람 기록 관리")
-        print(" 3. 통계          (2차 구현 예정)")
-        print(" 4. 검색          (2차 구현 예정)")
+        print(" 3. 통계")
+        print(" 4. 검색")
         print(" 0. 종료")
         print_line2()
 
@@ -253,23 +292,11 @@ def start(data):
         elif menu == "2":
             viewing_menu(data)
         elif menu == "3":
-            not_ready("통계", "FR-03~05")
+            statistics_menu(data)
         elif menu == "4":
-            not_ready("검색", "FR-06")
+            search_screen(data)
         elif menu == "0":
             return
-
-
-# 아직 안 만든 메뉴 안내 화면
-def not_ready(name, code):
-    print_header("관극로그 > " + name, "")
-    print(" ! " + name + " 기능(" + code + ")은 2차 구현 예정입니다.")
-    print("")
-    print(" 이번 1차 구현 범위")
-    print("  - FR-01 공연 및 관람 기록 관리")
-    print("  - FR-02 티켓 및 지출 내역 관리")
-    print("  - json 파일 저장")
-    wait_enter()
 
 
 # ============================================================
@@ -850,4 +877,202 @@ def delete_viewing_screen(data, performance):
 
     print_line2()
     print("  " + viewing["id"] + " (" + viewing["date"] + ") 삭제 완료")
+    wait_enter()
+
+
+# ============================================================
+# 통계 (UI-04, UI-05 / FR-03 ~ FR-05)
+# ============================================================
+
+def statistics_menu(data):
+    while True:
+        print_header("관극로그 > 통계", "FR-03 ~ FR-05 지출 통계")
+        print(" 1. 월별 지출 통계")
+        print(" 2. 공연별 지출 분석")
+        print(" 3. 공연별 순위")
+        print(" 0. 이전 메뉴")
+        print_line2()
+
+        menu = input_menu(3)
+        if menu == "1":
+            monthly_statistics_screen(data)
+        elif menu == "2":
+            performance_analysis_screen(data)
+        elif menu == "3":
+            ranking_screen(data)
+        elif menu == "0":
+            return
+
+
+# 합계 표 출력하기 (월별 통계, 공연별 분석에서 같이 쓴다)
+def print_summary_table(result):
+    print(" " + fill_right("관람 횟수", 10) + fill_right("총 티켓 지출", 16) + fill_right("총 MD 지출", 14) + fill_right("총 순지출", 16))
+    print_line2()
+    print(" " + fill_right(str(result["count"]) + "회", 10) + fill_right(won(result["ticket"]), 16) + fill_right(won(result["md"]), 14) + fill_right(won(result["net"]), 16))
+
+
+# FR-03 월별 지출 통계 화면 (UI-04)
+def monthly_statistics_screen(data):
+    print_header("관극로그 > 통계 > 월별 지출 통계", "")
+    print(" 연도랑 월을 입력하면 그 달에 본 공연의 지출을 모아서 보여줍니다.")
+    print(" ('취소' 라고 입력하면 이전 메뉴로 돌아갑니다)")
+    print("")
+
+    year = input_year()
+    if year == None:
+        return
+    month = input_month()
+    if month == None:
+        return
+
+    # 통계는 service.py 를 거쳐서 statistics.py 가 계산한다
+    result, message = service.get_monthly_statistics(data, year, month)
+
+    print_header("관극로그 > 통계 > 월별 지출 통계", str(year) + "년 " + str(month) + "월")
+
+    # EH-03 : 그 달에 본 게 없으면 안내만 하고 돌아간다
+    if result == None:
+        print(" ! " + message)
+        wait_enter()
+        return
+
+    # 그 달에 본 관람 기록 목록
+    print(" " + fill("관람일", 12) + fill("공연명", 22) + fill_right("티켓 지출", 12) + fill_right("MD", 11) + fill_right("순지출", 12))
+    print_line2()
+    for row in result["rows"]:
+        performance = row["performance"]
+        viewing = row["viewing"]
+        ex = viewing["expense"]
+        ticket = ex["actual_price"] - ex["transfer_income"]
+        md = expense.get_md_total(ex)
+        net = expense.calculate_net_expense(ex)
+        print(" " + fill(viewing["date"], 12) + fill(performance["title"], 22) + fill_right(won(ticket), 12) + fill_right(won(md), 11) + fill_right(won(net), 12))
+
+    # 그 달 합계
+    print("")
+    print(" [" + str(year) + "년 " + str(month) + "월 합계]")
+    print_summary_table(result)
+    wait_enter()
+
+
+# FR-04 공연별 지출 분석 화면 (UI-05)
+def performance_analysis_screen(data):
+    print_header("관극로그 > 통계 > 공연별 지출 분석", "")
+    performance = choose_performance(data, "분석")
+    if performance == None:
+        return
+
+    result, message = service.get_performance_analysis(data, performance["id"])
+    if result == None:
+        print(" ! " + message)
+        wait_enter()
+        return
+
+    venue = performance["venue"]
+    if venue == "":
+        venue = "-"
+    print_header("관극로그 > 통계 > 공연별 지출 분석", performance["id"] + " " + performance["title"] + " @ " + venue)
+
+    # 그 공연의 관람 기록 전체
+    print(" [관람 기록]")
+    print_viewing_list(performance)
+
+    # 누적 통계
+    print("")
+    print(" [누적 통계]")
+    print_summary_table(result)
+    print_line2()
+
+    # EH-05 : 관람 횟수가 0 이면 평균 대신 안내 문구를 띄운다
+    if result["average"] == None:
+        print(" ! " + message)
+    else:
+        print(" 회당 평균 지출 : " + won(result["average"]) + "  (총 순지출 " + won(result["net"]) + " / " + str(result["count"]) + "회)")
+    wait_enter()
+
+
+# FR-05 공연별 순위 화면 (UI-05)
+def ranking_screen(data):
+    rank_list, message = service.get_ranking(data)
+
+    print_header("관극로그 > 통계 > 공연별 순위", "총 순지출이 큰 순서")
+
+    # EH-03 : 공연이 하나도 없으면 안내만 하고 돌아간다
+    if rank_list == None:
+        print(" ! " + message)
+        wait_enter()
+        return
+
+    print(" " + fill_right("순위", 6) + "  " + fill("ID", 5) + fill("공연명", 26) + fill_right("총 순지출", 14) + fill_right("관람 횟수", 11))
+    print_line2()
+    for item in rank_list:
+        print(" " + fill_right(str(item["rank"]) + "위", 6) + "  " + fill(item["id"], 5) + fill(item["title"], 26) + fill_right(won(item["net"]), 14) + fill_right(str(item["count"]) + "회", 11))
+    wait_enter()
+
+
+# ============================================================
+# 검색 (UI-06 / FR-06)
+# ============================================================
+
+def search_screen(data):
+    print_header("관극로그 > 검색", "FR-06 공연 검색 및 필터링")
+
+    # EH-03 : 공연이 없으면 검색할 것도 없다
+    if len(data["performances"]) == 0:
+        print(" ! 등록된 공연이 없습니다.")
+        wait_enter()
+        return
+
+    print(" 무엇으로 검색할지 골라주세요. (대소문자는 구분하지 않습니다)")
+    print("   1. 공연명")
+    print("   2. 공연장")
+    print("   3. 캐스팅")
+    print(" ('취소' 라고 입력하면 이전 메뉴로 돌아갑니다)")
+    print("")
+
+    search_type = input_search_type()
+    if search_type == None:
+        return
+    keyword = input_text("검색어", "검색어", True, None)
+    if keyword == None:
+        return
+
+    results = service.search_performances(data, search_type, keyword)
+
+    print_header("관극로그 > 검색 > 검색 결과", search_type + " : " + keyword)
+
+    # EH-03 : 찾은 게 없으면 안내만 하고 돌아간다
+    if len(results) == 0:
+        print(" ! 검색 결과가 없습니다.")
+        wait_enter()
+        return
+
+    print(" 공연 " + str(len(results)) + "건을 찾았습니다.")
+
+    for result in results:
+        performance = result["performance"]
+        type_name = performance["type"]
+        if type_name == "":
+            type_name = "-"
+        venue = performance["venue"]
+        if venue == "":
+            venue = "-"
+
+        print("")
+        print(" [" + performance["id"] + "] " + performance["title"] + "  (" + type_name + " / " + venue + ")")
+
+        if len(result["viewings"]) == 0:
+            print("   ! 등록된 관람 기록이 없습니다.")
+            continue
+
+        print("   " + fill("ID", 5) + fill("관람일", 12) + fill("좌석", 14) + fill("캐스팅", 20) + fill_right("순지출", 12))
+        print("   ---------------------------------------------------------------")
+        for viewing in result["viewings"]:
+            seat = viewing["seat"]
+            if seat == "":
+                seat = "-"
+            casting = make_casting_text(viewing["casting"])
+            net = expense.calculate_net_expense(viewing["expense"])
+            print("   " + fill(viewing["id"], 5) + fill(viewing["date"], 12) + fill(seat, 14) + fill(casting, 20) + fill_right(won(net), 12))
+
     wait_enter()

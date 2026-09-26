@@ -101,6 +101,54 @@ def check_date(text):
     return value, ""
 
 
+# 연도 확인하기 (월별 통계에서 쓴다)
+def check_year(text):
+    value, error = check_required(text, "연도")
+    if value == None:
+        return None, error
+
+    try:
+        number = int(value)
+    except:
+        return None, "연도는 숫자만 입력해주세요. (예: 2026)"
+
+    if number < 1900 or number > 2100:
+        return None, "연도는 1900 ~ 2100 사이로 입력해주세요. (예: 2026)"
+    return number, ""
+
+
+# 월 확인하기 (월별 통계에서 쓴다)
+def check_month(text):
+    value, error = check_required(text, "월")
+    if value == None:
+        return None, error
+
+    try:
+        number = int(value)
+    except:
+        return None, "월은 숫자만 입력해주세요. (예: 8)"
+
+    if number < 1 or number > 12:
+        return None, "월은 1 ~ 12 사이로 입력해주세요."
+    return number, ""
+
+
+# 검색 기준 고른 거 확인하기 (FR-06)
+def check_search_type(text):
+    value, error = check_required(text, "검색 기준")
+    if value == None:
+        return None, error
+
+    if value == "1" or value == "공연명":
+        return "공연명", ""
+    if value == "2" or value == "공연장":
+        return "공연장", ""
+    if value == "3" or value == "캐스팅":
+        return "캐스팅", ""
+
+    return None, "검색 기준은 1 ~ 3 사이의 번호로 골라주세요."
+
+
 # 거래 유형 고른 거 확인하기
 def check_trade_type(text):
     value, error = check_required(text, "거래 유형")
