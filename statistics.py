@@ -100,6 +100,7 @@ def performance_analysis(data, performance_id):
 
 # FR-05 공연별 순위
 # 공연마다 총 순지출을 구해서 큰 순서대로 줄 세운다
+# 관람 기록이 없는 공연은 순위에 넣지 않는다
 def ranking(data):
     # EH-03 : 공연이 하나도 없으면 안내 문구만 돌려준다
     if len(data["performances"]) == 0:
@@ -107,6 +108,10 @@ def ranking(data):
 
     rank_list = []
     for performance in data["performances"]:
+        # 한 번도 안 본 공연은 순위에서 뺀다
+        if len(performance["viewings"]) == 0:
+            continue
+
         summary = make_summary(performance["viewings"])
         item = {}
         item["id"] = performance["id"]
@@ -114,6 +119,10 @@ def ranking(data):
         item["net"] = summary["net"]
         item["count"] = summary["count"]
         rank_list.append(item)
+
+    # EH-03 : 공연은 있는데 관람 기록이 하나도 없으면 안내 문구만 돌려준다
+    if len(rank_list) == 0:
+        return None, "관람 기록이 없어서 순위를 매길 수 없습니다."
 
     # 총 순지출이 큰 순서대로 정렬
     rank_list.sort(key=get_net, reverse=True)
