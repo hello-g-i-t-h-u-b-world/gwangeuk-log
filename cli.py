@@ -7,12 +7,13 @@
 #  3. 삭제처럼 되돌릴 수 없는 건 (y/n) 으로 한번 더 물어본다
 #
 # 계산이랑 저장은 여기서 안 하고 service.py 한테 시킨다.
+# 설계서 3.1 구성도대로 이 파일은 service.py 랑 input_utils.py 만 부른다.
+# (금액 계산이 필요하면 expense.py 를 직접 부르지 않고 service.py 를 거친다)
 # 1차 : FR-01 공연/관람 기록 관리, FR-02 지출 내역 관리, json 저장
 # 2차 : FR-03 월별 통계, FR-04 공연별 분석, FR-05 순위, FR-06 검색
 # ============================================================
 
 import os
-import expense
 import input_utils
 import service
 
@@ -32,7 +33,9 @@ def clear_screen():
     if os.name == "nt":
         os.system("cls")
     else:
-        print("\033[2J\033[H", end="")
+        # H : 커서 맨 위로 / 2J : 보이는 화면 지우기 / 3J : 스크롤 기록까지 지우기
+        # (맥 터미널은 2J 할 때 화면을 위로 밀어 올려서 3J 를 제일 마지막에 해야 다 지워진다)
+        print("\033[H\033[2J\033[3J", end="", flush=True)
 
 
 # 화면 맨 위에 구분선이랑 제목 띄우기
@@ -56,11 +59,27 @@ def get_width(text):
     return width
 
 
+# 칸보다 긴 글자 자르기
+# 그냥 자르면 잘린 건지 원래 그런 건지 모르니까 끝에 ".." 을 붙인다
+# 예) "태양, 지디, 대성" 을 15칸에 넣으면 "태양, 지디.." 이 된다
+def cut_text(text, size):
+    if get_width(text) <= size:
+        return text
+
+    # ".." 들어갈 두 칸을 남기고 자른다
+    while get_width(text) > size - 2:
+        text = text[0:len(text) - 1]
+
+    # 잘린 끝에 쉼표나 띄어쓰기가 남으면 "태양, 지디, .." 처럼 지저분해서 지운다
+    while text.endswith(",") or text.endswith(" "):
+        text = text[0:len(text) - 1]
+
+    return text + ".."
+
+
 # 글자 뒤에 빈칸을 채워서 칸 맞추기
 def fill(text, size):
-    text = str(text)
-    while get_width(text) > size:               # 너무 길면 뒤를 잘라낸다
-        text = text[0:len(text) - 1]
+    text = cut_text(str(text), size)            # 너무 길면 잘라내고 ".." 을 붙인다
     while get_width(text) < size:
         text = text + " "
     return text
@@ -68,9 +87,7 @@ def fill(text, size):
 
 # 글자 앞에 빈칸을 채워서 칸 맞추기 (금액처럼 오른쪽에 붙일 때)
 def fill_right(text, size):
-    text = str(text)
-    while get_width(text) > size:
-        text = text[0:len(text) - 1]
+    text = cut_text(str(text), size)
     while get_width(text) < size:
         text = " " + text
     return text
@@ -91,9 +108,25 @@ def get_input(message):
         print("")
         return None
 
+    # 깨진 글자(�)가 섞여 들어왔으면 지운다
+    # 그냥 두면 화면에 � 로 나오고, 저장할 때 data.json 이 깨진다
+    text, removed = input_utils.remove_broken_text(text)
+    if removed == True:
+        print(" ! 입력에 깨진 글자가 섞여 있어서 지웠습니다. -> [" + text + "]")
+
     if text.strip() == "취소":
         return None
     return text
+
+
+# 저장이 잘 됐는지 알려주기
+# 저장에 실패하면 메모리에만 있고 파일에는 없는 거라서 꼭 알려줘야 한다
+def print_save_result(saved):
+    if saved == True:
+        print("  data.json 에 저장했습니다.")
+    else:
+        print(" ! data.json 에 저장하지 못했습니다. (디스크 공간이나 파일 권한을 확인해주세요)")
+        print(" ! 지금 프로그램을 끄면 방금 바꾼 내용은 사라집니다.")
 
 
 # 글자 입력 받기
@@ -384,11 +417,17 @@ def add_performance_screen(data):
     if venue == None:
         return
 
-    performance = service.add_performance(data, title, type_name, venue)
+    performance, message, saved = service.add_performance(data, title, type_name, venue)
 
     print_line2()
+    # service.py 의 2차 검증에서 걸리면 저장하지 않고 이유를 보여준다
+    if performance == None:
+        print(" ! 저장하지 않았습니다 : " + message)
+        wait_enter()
+        return
+
     print("  " + performance["id"] + " 등록 완료 : " + performance["title"])
-    print("  data.json 에 저장했습니다.")
+    print_save_result(saved)
     wait_enter()
 
 
@@ -413,10 +452,16 @@ def update_performance_screen(data):
     if venue == None:
         return
 
-    service.update_performance(data, performance["id"], title, type_name, venue)
+    result, message, saved = service.update_performance(data, performance["id"], title, type_name, venue)
 
     print_line2()
+    if result == None:
+        print(" ! 저장하지 않았습니다 : " + message)
+        wait_enter()
+        return
+
     print("  " + performance["id"] + " 수정 완료 : " + performance["title"])
+    print_save_result(saved)
     wait_enter()
 
 
@@ -440,10 +485,11 @@ def delete_performance_screen(data):
         wait_enter()
         return
 
-    service.delete_performance(data, performance["id"])
+    saved = service.delete_performance(data, performance["id"])
 
     print_line2()
     print("  " + performance["id"] + " (" + performance["title"] + ") 삭제 완료")
+    print_save_result(saved)
     wait_enter()
 
 
@@ -479,7 +525,7 @@ def print_viewing_list(performance):
             seat = "-"
         casting = make_casting_text(viewing["casting"])
         actual = viewing["expense"]["actual_price"]
-        net = expense.calculate_net_expense(viewing["expense"])
+        net = service.get_net_expense(viewing["expense"])
 
         print(" " + fill(viewing["id"], 5) + fill(viewing["date"], 12) + fill(seat, 14) + fill(casting, 15) + fill_right(won(actual), 11) + fill_right(won(net), 11))
 
@@ -614,7 +660,7 @@ def input_md(old):
 # 지출 정보 입력 받기 (FR-02)
 # old 가 있으면 수정하는 거고, 없으면 새로 등록하는 거다
 def input_expense(old):
-    expense_data = expense.make_empty_expense()
+    expense_data = service.make_empty_expense()
 
     print("")
     print_line2()
@@ -732,7 +778,7 @@ def print_viewing_detail(viewing):
         print_money("티켓 정가", ex["ticket_price"], " ")
 
         # 할인
-        discount = expense.get_discount_price(ex)
+        discount = service.get_discount_price(ex)
         if discount > 0:
             discount_name = ex["discount_name"]
             if discount_name == "":
@@ -741,13 +787,13 @@ def print_viewing_detail(viewing):
 
         # 쿠폰
         for coupon in ex["coupons"]:
-            if expense.is_fee_free_coupon(coupon["name"]) == True:
+            if service.is_fee_free_coupon(coupon["name"]) == True:
                 print("  " + fill("쿠폰 " + coupon["name"], 26) + "   " + fill_right("수수료 면제", 12))
             else:
                 print_money("쿠폰 " + coupon["name"], coupon["amount"], "-")
 
         # 예매 수수료
-        fee = expense.get_booking_fee(ex)
+        fee = service.get_booking_fee(ex)
         if fee == 0 and ex["booking_fee"] > 0:
             print_money("예매 수수료 (면제 적용)", fee, "+")
         else:
@@ -762,7 +808,7 @@ def print_viewing_detail(viewing):
         print_money("티켓 양도 금액", ex["transfer_income"], "-")
 
     print_line()
-    print_money("순지출", expense.calculate_net_expense(ex), " ")
+    print_money("순지출", service.get_net_expense(ex), " ")
 
 
 # 관람 기록 추가 화면
@@ -786,18 +832,36 @@ def add_viewing_screen(data, performance):
     if expense_data == None:
         return
 
-    viewing, message = service.add_viewing(data, performance["id"], date, seat, casting, expense_data)
-    if viewing == None:
-        print(" ! 관람 기록을 등록하지 못했습니다.")
-        wait_enter()
-        return
+    # 계산 결과 확인 (설계서 6.2 화면 설계 3번)
+    # 저장하기 전에 계산만 미리 해서 보여주고, 저장할지 물어본다
+    preview, message = service.preview_expense(expense_data)
+    new_viewing = {}
+    new_viewing["date"] = date
+    new_viewing["seat"] = seat
+    new_viewing["casting"] = casting
+    new_viewing["expense"] = preview
 
-    print_header("관극로그 > 관람 기록 관리 > 등록 완료", performance["id"] + " " + performance["title"] + " / " + viewing["id"])
-    print_viewing_detail(viewing)
+    print_header("관극로그 > 관람 기록 관리 > 계산 결과 확인", performance["id"] + " " + performance["title"])
+    print_viewing_detail(new_viewing)
     print_line2()
     if message != "":
         print(" ! " + message)
-    print("  " + viewing["id"] + " 등록 완료 - data.json 에 저장했습니다.")
+
+    if ask_yes_no("저장하시겠습니까?") == False:
+        print(" ! 저장하지 않았습니다. 입력한 내용은 버려집니다.")
+        wait_enter()
+        return
+
+    viewing, message, saved = service.add_viewing(data, performance["id"], date, seat, casting, expense_data)
+
+    # service.py 의 2차 검증에서 걸리면 저장하지 않고 이유를 보여준다
+    if viewing == None:
+        print(" ! 저장하지 않았습니다 : " + message)
+        wait_enter()
+        return
+
+    print("  " + viewing["id"] + " 등록 완료")
+    print_save_result(saved)
     wait_enter()
 
 
@@ -845,14 +909,20 @@ def update_viewing_screen(data, performance):
         if expense_data == None:
             return
 
-    viewing, message = service.update_viewing(data, performance["id"], viewing["id"], date, seat, casting, expense_data)
+    result, message, saved = service.update_viewing(data, performance["id"], viewing["id"], date, seat, casting, expense_data)
+    if result == None:
+        print(" ! 저장하지 않았습니다 : " + message)
+        wait_enter()
+        return
+    viewing = result
 
     print_header("관극로그 > 관람 기록 관리 > 수정 완료", performance["id"] + " " + performance["title"] + " / " + viewing["id"])
     print_viewing_detail(viewing)
     print_line2()
     if message != "":
         print(" ! " + message)
-    print("  " + viewing["id"] + " 수정 완료 - data.json 에 저장했습니다.")
+    print("  " + viewing["id"] + " 수정 완료")
+    print_save_result(saved)
     wait_enter()
 
 
@@ -873,10 +943,11 @@ def delete_viewing_screen(data, performance):
         wait_enter()
         return
 
-    service.delete_viewing(data, performance["id"], viewing["id"])
+    saved = service.delete_viewing(data, performance["id"], viewing["id"])
 
     print_line2()
     print("  " + viewing["id"] + " (" + viewing["date"] + ") 삭제 완료")
+    print_save_result(saved)
     wait_enter()
 
 
@@ -944,8 +1015,8 @@ def monthly_statistics_screen(data):
         viewing = row["viewing"]
         ex = viewing["expense"]
         ticket = ex["actual_price"] - ex["transfer_income"]
-        md = expense.get_md_total(ex)
-        net = expense.calculate_net_expense(ex)
+        md = service.get_md_total(ex)
+        net = service.get_net_expense(ex)
         print(" " + fill(viewing["date"], 12) + fill(performance["title"], 22) + fill_right(won(ticket), 12) + fill_right(won(md), 11) + fill_right(won(net), 12))
 
     # 그 달 합계
@@ -1072,7 +1143,7 @@ def search_screen(data):
             if seat == "":
                 seat = "-"
             casting = make_casting_text(viewing["casting"])
-            net = expense.calculate_net_expense(viewing["expense"])
+            net = service.get_net_expense(viewing["expense"])
             print("   " + fill(viewing["id"], 5) + fill(viewing["date"], 12) + fill(seat, 14) + fill(casting, 20) + fill_right(won(net), 12))
 
     wait_enter()

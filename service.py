@@ -6,9 +6,20 @@
 # 지출 계산이 필요하면 expense.py 한테 시킨다.
 # 통계 요청은 statistics.py 한테 넘기고 결과만 cli.py 로 돌려준다.
 # (통계는 data 를 안 고치니까 저장은 안 한다)
+#
+# 데이터를 고치는 순서 (설계서 MOD-003, 시퀀스 다이어그램 10 ~ 18)
+#   1. input_utils.py 로 2차 검증 -> 실패하면 data 를 안 건드리고 오류를 돌려준다
+#   2. 관람 기록이면 expense.py 로 금액 계산
+#   3. 메모리의 data 수정
+#   4. repository.py 로 저장
+#
+# 등록 / 수정 함수는 (결과, 메시지, 저장 성공 여부) 로 돌려준다.
+# 결과가 None 이면 검증에 실패한 거고, 그때 메시지가 오류 내용이다.
+# 저장에 실패하면 cli.py 가 "저장하지 못했습니다" 라고 알려준다.
 # ============================================================
 
 import expense
+import input_utils
 import repository
 import statistics
 
@@ -60,7 +71,13 @@ def find_viewing(data, performance_id, viewing_id):
 
 
 # 공연 등록하기 (FR-01)
+# (공연, 메시지, 저장 성공 여부) 로 돌려준다
 def add_performance(data, title, type_name, venue):
+    # 1. 2차 검증 : 공연명이 비어 있으면 저장하지 않는다
+    error = input_utils.check_performance(title)
+    if error != "":
+        return None, error, False
+
     performance = {}
     performance["id"] = make_performance_id(data)
     performance["title"] = title
@@ -69,44 +86,56 @@ def add_performance(data, title, type_name, venue):
     performance["viewings"] = []
 
     data["performances"].append(performance)
-    repository.save_data(data)              # 등록하자마자 바로 저장
-    return performance
+    saved = repository.save_data(data)      # 등록하자마자 바로 저장
+    return performance, "", saved
 
 
 # 공연 수정하기
+# (공연, 메시지, 저장 성공 여부) 로 돌려준다
 def update_performance(data, performance_id, title, type_name, venue):
     performance = find_performance(data, performance_id)
     if performance == None:
-        return False
+        return None, "해당 공연을 찾을 수 없습니다.", False
+
+    # 1. 2차 검증 (실패하면 원래 공연 정보는 그대로 둔다)
+    error = input_utils.check_performance(title)
+    if error != "":
+        return None, error, False
 
     performance["title"] = title
     performance["type"] = type_name
     performance["venue"] = venue
 
-    repository.save_data(data)
-    return True
+    saved = repository.save_data(data)
+    return performance, "", saved
 
 
 # 공연 삭제하기 (그 공연의 관람 기록도 같이 지워진다)
 # 진짜 지울지 물어보는 건 cli.py 가 먼저 한다 (EH-04)
+# 저장까지 잘 되면 True
 def delete_performance(data, performance_id):
     performance = find_performance(data, performance_id)
     if performance == None:
         return False
 
     data["performances"].remove(performance)
-    repository.save_data(data)
-    return True
+    saved = repository.save_data(data)
+    return saved
 
 
 # 관람 기록 추가하기 (FR-01, FR-02)
-# (관람기록, 안내문구) 로 돌려준다
+# (관람기록, 안내문구, 저장 성공 여부) 로 돌려준다
 def add_viewing(data, performance_id, date, seat, casting, expense_data):
     performance = find_performance(data, performance_id)
     if performance == None:
-        return None, ""
+        return None, "해당 공연을 찾을 수 없습니다.", False
 
-    # 금액 계산은 expense.py 가 한다
+    # 1. 2차 검증 : 필수값이랑 서로 안 맞는 값이 없는지 확인
+    error = input_utils.check_viewing(date, expense_data)
+    if error != "":
+        return None, error, False
+
+    # 2. 금액 계산은 expense.py 가 한다
     expense_data, message = expense.calculate_expense(expense_data)
 
     viewing = {}
@@ -117,16 +146,25 @@ def add_viewing(data, performance_id, date, seat, casting, expense_data):
     viewing["expense"] = expense_data
 
     performance["viewings"].append(viewing)
-    repository.save_data(data)
-    return viewing, message
+    saved = repository.save_data(data)
+    return viewing, message, saved
 
 
 # 관람 기록 수정하기
 # expense_data 가 None 이면 지출 정보는 안 고치고 그대로 둔다
+# (관람기록, 안내문구, 저장 성공 여부) 로 돌려준다
 def update_viewing(data, performance_id, viewing_id, date, seat, casting, expense_data):
     viewing = find_viewing(data, performance_id, viewing_id)
     if viewing == None:
-        return None, ""
+        return None, "해당 관람 기록을 찾을 수 없습니다.", False
+
+    # 1. 2차 검증 (지출 정보를 안 고치면 원래 지출 정보로 검사한다)
+    check_expense = expense_data
+    if check_expense == None:
+        check_expense = viewing["expense"]
+    error = input_utils.check_viewing(date, check_expense)
+    if error != "":
+        return None, error, False           # 실패하면 원래 기록은 그대로 둔다
 
     viewing["date"] = date
     viewing["seat"] = seat
@@ -137,11 +175,12 @@ def update_viewing(data, performance_id, viewing_id, date, seat, casting, expens
         expense_data, message = expense.calculate_expense(expense_data)
         viewing["expense"] = expense_data
 
-    repository.save_data(data)
-    return viewing, message
+    saved = repository.save_data(data)
+    return viewing, message, saved
 
 
 # 관람 기록 삭제하기 (삭제 확인은 cli.py 가 먼저 한다)
+# 저장까지 잘 되면 True
 def delete_viewing(data, performance_id, viewing_id):
     performance = find_performance(data, performance_id)
     if performance == None:
@@ -152,8 +191,8 @@ def delete_viewing(data, performance_id, viewing_id):
         return False
 
     performance["viewings"].remove(viewing)
-    repository.save_data(data)
-    return True
+    saved = repository.save_data(data)
+    return saved
 
 
 # 공연 하나의 순지출 합계 구하기 (공연 목록 화면에 보여주려고 쓴다)
@@ -229,3 +268,48 @@ def search_performances(data, search_type, keyword):
         results.append(result)
 
     return results
+
+
+# ============================================================
+# 금액 계산 중계
+# 설계서 3.1 구성도에서 cli.py 는 service.py 랑 input_utils.py 만 부른다.
+# 그래서 화면에 보여줄 금액이 필요하면 cli.py 가 expense.py 를 직접 부르지 않고
+# 여기를 거쳐서 받아간다. (계산은 전부 expense.py 가 한다)
+# ============================================================
+
+# 빈 지출 정보 만들기
+def make_empty_expense():
+    return expense.make_empty_expense()
+
+
+# 저장하기 전에 계산 결과만 미리 보기 ("저장하시겠습니까? (y/n)" 앞에 보여줄 것)
+# 원래 지출 정보는 안 바꾸려고 복사해서 계산한다
+# (계산된 지출 정보, 안내문구) 로 돌려준다
+def preview_expense(expense_data):
+    copy_data = dict(expense_data)
+    return expense.calculate_expense(copy_data)
+
+
+# 순지출
+def get_net_expense(expense_data):
+    return expense.calculate_net_expense(expense_data)
+
+
+# MD 합계
+def get_md_total(expense_data):
+    return expense.get_md_total(expense_data)
+
+
+# 할인율로 깎인 금액
+def get_discount_price(expense_data):
+    return expense.get_discount_price(expense_data)
+
+
+# 실제로 더해진 예매 수수료 (면제 쿠폰이 있으면 0)
+def get_booking_fee(expense_data):
+    return expense.get_booking_fee(expense_data)
+
+
+# 예매수수료 면제 쿠폰인지
+def is_fee_free_coupon(name):
+    return expense.is_fee_free_coupon(name)

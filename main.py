@@ -9,11 +9,25 @@
 # 3. 사용자가 0번을 고르면 끝낸다
 # ============================================================
 
+import sys
 import cli
 import repository
 
+# 한글을 백스페이스로 지울 때 한 글자씩 제대로 지워지게 한다
+# (import 만 해 두면 input() 이 알아서 readline 으로 입력을 받는다)
+# 윈도우에는 이 모듈이 없어서 그냥 넘어간다
+try:
+    import readline
+except:
+    pass
+
 
 def main():
+    # 0. 입력에 깨진 글자가 섞여 들어와도 프로그램이 멈추지 않게 한다
+    #    컴퓨터 설정(로케일)에 따라 깨진 글자를 받으면 바로 오류가 나는 경우가 있어서,
+    #    어디서 실행하든 일단 받아두게 하고 cli.get_input() 에서 지운다
+    sys.stdin.reconfigure(errors="surrogateescape")
+
     # 1. 데이터 불러오기
     data, status = repository.load_data()
 

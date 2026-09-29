@@ -13,9 +13,11 @@
 # 총 티켓 지출 = 총 실제 구매금액 - 총 양도 금액
 # 총 순지출   = 총 티켓 지출 + 총 MD 지출
 # 회당 평균   = 총 순지출 / 관람 횟수 (관람 횟수가 0 이면 계산 안 함, EH-05)
+#
+# 설계서 3.1 구성도대로 이 파일은 다른 파일을 import 하지 않는다.
+# 실제 구매금액(actual_price)은 등록할 때 expense.py 가 계산해서 저장해 뒀으니까
+# 여기서는 저장된 값을 더하기만 하면 된다.
 # ============================================================
-
-import expense
 
 
 # 관람 기록 여러 개의 합계 구하기
@@ -27,10 +29,18 @@ def make_summary(viewing_list):
 
     for viewing in viewing_list:
         ex = viewing["expense"]
+
         # 티켓 지출은 실제 구매금액에서 양도하고 받은 돈을 뺀 것
-        total_ticket = total_ticket + ex["actual_price"] - ex["transfer_income"]
-        total_md = total_md + expense.get_md_total(ex)
-        total_net = total_net + expense.calculate_net_expense(ex)
+        ticket = ex["actual_price"] - ex["transfer_income"]
+
+        # MD 는 여러 개니까 하나씩 더한다
+        md = 0
+        for item in ex["md_items"]:
+            md = md + item["amount"]
+
+        total_ticket = total_ticket + ticket
+        total_md = total_md + md
+        total_net = total_net + ticket + md     # 순지출 = 티켓 지출 + MD 지출
 
     summary = {}
     summary["count"] = len(viewing_list)
