@@ -12,6 +12,4 @@ data.json
 data_backup.json
 test_data.json
 
-test_calc.py
-
 .idea/

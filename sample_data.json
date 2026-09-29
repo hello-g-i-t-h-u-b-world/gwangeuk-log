@@ -1,0 +1,282 @@
+{
+  "performances": [
+    {
+      "id": "P1",
+      "title": "언체인",
+      "type": "연극",
+      "venue": "YES24스테이지 2관",
+      "viewings": [
+        {
+          "id": "V1",
+          "date": "2026-06-18",
+          "seat": "R석",
+          "casting": [
+            "최호승",
+            "최석진"
+          ],
+          "expense": {
+            "ticket_price": 66000,
+            "discount_name": "프리뷰 할인",
+            "discount_rate": 0.5,
+            "coupons": [],
+            "booking_fee": 2000,
+            "booking_site": "YES24 티켓",
+            "trade_type": "직접구매",
+            "actual_price": 35000,
+            "transfer_income": 0,
+            "md_items": [
+              {
+                "name": "프로그램북",
+                "amount": 10000
+              }
+            ]
+          }
+        },
+        {
+          "id": "V4",
+          "date": "2026-08-19",
+          "seat": "R석",
+          "casting": [
+            "양지원",
+            "김기택"
+          ],
+          "expense": {
+            "ticket_price": 66000,
+            "discount_name": "마티네 할인",
+            "discount_rate": 0.3,
+            "coupons": [],
+            "booking_fee": 2000,
+            "booking_site": "YES24 티켓",
+            "trade_type": "직접구매",
+            "actual_price": 48200,
+            "transfer_income": 0,
+            "md_items": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "P2",
+      "title": "싸이흠뻑쇼 SUMMER SWAG 2026 대구",
+      "type": "콘서트",
+      "venue": "대구스타디움 보조경기장",
+      "viewings": [
+        {
+          "id": "V2",
+          "date": "2026-07-04",
+          "seat": "스탠딩SR석",
+          "casting": [
+            "싸이"
+          ],
+          "expense": {
+            "ticket_price": 185000,
+            "discount_name": "",
+            "discount_rate": 0.0,
+            "coupons": [],
+            "booking_fee": 2000,
+            "booking_site": "NOL 티켓",
+            "trade_type": "직접구매",
+            "actual_price": 187000,
+            "transfer_income": 0,
+            "md_items": []
+          }
+        },
+        {
+          "id": "V3",
+          "date": "2026-07-05",
+          "seat": "스탠딩SR석",
+          "casting": [
+            "싸이"
+          ],
+          "expense": {
+            "ticket_price": 185000,
+            "discount_name": "",
+            "discount_rate": 0.0,
+            "coupons": [],
+            "booking_fee": 2000,
+            "booking_site": "NOL 티켓",
+            "trade_type": "양도함",
+            "actual_price": 187000,
+            "transfer_income": 185000,
+            "md_items": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "P3",
+      "title": "엘리자벳",
+      "type": "뮤지컬",
+      "venue": "블루스퀘어 우리은행홀",
+      "viewings": [
+        {
+          "id": "V5",
+          "date": "2026-08-22",
+          "seat": "VIP석",
+          "casting": [
+            "린아",
+            "카이",
+            "박은태"
+          ],
+          "expense": {
+            "ticket_price": 180000,
+            "discount_name": "",
+            "discount_rate": 0.0,
+            "coupons": [
+              {
+                "name": "NOL 공연 할인쿠폰",
+                "amount": 10000
+              },
+              {
+                "name": "카드사 청구할인 쿠폰",
+                "amount": 5000
+              }
+            ],
+            "booking_fee": 2000,
+            "booking_site": "NOL 티켓",
+            "trade_type": "직접구매",
+            "actual_price": 167000,
+            "transfer_income": 0,
+            "md_items": [
+              {
+                "name": "프로그램북",
+                "amount": 20000
+              },
+              {
+                "name": "엽서 세트",
+                "amount": 8000
+              }
+            ]
+          }
+        },
+        {
+          "id": "V6",
+          "date": "2026-09-12",
+          "seat": "R석",
+          "casting": [
+            "이지혜",
+            "김준수",
+            "박은태"
+          ],
+          "expense": {
+            "ticket_price": 150000,
+            "discount_name": "",
+            "discount_rate": 0.0,
+            "coupons": [],
+            "booking_fee": 0,
+            "booking_site": "티켓베이",
+            "trade_type": "양도받음",
+            "actual_price": 150000,
+            "transfer_income": 0,
+            "md_items": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "P4",
+      "title": "곤 투모로우",
+      "type": "뮤지컬",
+      "venue": "홍익대 대학로 아트센터 대극장",
+      "viewings": [
+        {
+          "id": "V7",
+          "date": "2026-09-17",
+          "seat": "R석",
+          "casting": [
+            "강필석",
+            "김재범",
+            "고영빈",
+            "김태한"
+          ],
+          "expense": {
+            "ticket_price": 90000,
+            "discount_name": "오프닝 위크 할인",
+            "discount_rate": 0.25,
+            "coupons": [],
+            "booking_fee": 2000,
+            "booking_site": "YES24 티켓",
+            "trade_type": "직접구매",
+            "actual_price": 69500,
+            "transfer_income": 0,
+            "md_items": []
+          }
+        },
+        {
+          "id": "V9",
+          "date": "2026-09-26",
+          "seat": "VIP석",
+          "casting": [
+            "송원근",
+            "윤소호",
+            "김준수",
+            "신재희"
+          ],
+          "expense": {
+            "ticket_price": 130000,
+            "discount_name": "재관람 할인",
+            "discount_rate": 0.2,
+            "coupons": [
+              {
+                "name": "YES24 공연 할인쿠폰",
+                "amount": 3000
+              },
+              {
+                "name": "예매수수료 면제 쿠폰",
+                "amount": 0
+              }
+            ],
+            "booking_fee": 2000,
+            "booking_site": "YES24 티켓",
+            "trade_type": "직접구매",
+            "actual_price": 101000,
+            "transfer_income": 0,
+            "md_items": [
+              {
+                "name": "OST 앨범",
+                "amount": 25000
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "P5",
+      "title": "Vaundy ASIA ARENA TOUR 2026 HORO",
+      "type": "콘서트",
+      "venue": "인스파이어 아레나",
+      "viewings": [
+        {
+          "id": "V8",
+          "date": "2026-09-20",
+          "seat": "스탠딩석",
+          "casting": [
+            "Vaundy"
+          ],
+          "expense": {
+            "ticket_price": 165000,
+            "discount_name": "",
+            "discount_rate": 0.0,
+            "coupons": [],
+            "booking_fee": 2000,
+            "booking_site": "NOL 티켓",
+            "trade_type": "직접구매",
+            "actual_price": 167000,
+            "transfer_income": 0,
+            "md_items": [
+              {
+                "name": "로고 타월",
+                "amount": 37000
+              },
+              {
+                "name": "투어 티셔츠",
+                "amount": 55000
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
